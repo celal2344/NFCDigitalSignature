@@ -1,0 +1,24 @@
+game:
+both apps starts with empty page
+app1 starts the game by writing plain text and creating a private key and a corresponding public key 
+plain text and the signature is revealed on app1's screen
+when devices are touched with nfc plain text public key is sent to the app2
+app2 generates multiple plain texts one of which is the correct one--
+
+when the devices are touched again app1 sends the signature and correct plain text is highlighted
+
+1app:
+encrypts plain text with private key 
+sends with public key and the signature
+
+2app:
+has multiple plain texts and the public key
+receives public key ,signature
+decrypts with public key and checks if 
+reveals plain text
+doesnt have private key
+
+reference
+https://www.geeksforgeeks.org/rsa-and-digital-signatures/
+https://www.geeksforgeeks.org/message-digest-in-information-security/
+
