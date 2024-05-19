@@ -1,8 +1,9 @@
 <host-apdu-service xmlns:android="http://schemas.android.com/apk/res/android"
-    android:description="SPServices"
+    android:description="@string/servicedesc"
     android:requireDeviceUnlock="false">
-    <aid-group android:description="aid"
+    <aid-group android:description="@string/aiddescription"
         android:category="other">
         <aid-filter android:name="A0000002471001"/>
+        <aid-filter android:name="00000000000000"/>
     </aid-group>
 </host-apdu-service>

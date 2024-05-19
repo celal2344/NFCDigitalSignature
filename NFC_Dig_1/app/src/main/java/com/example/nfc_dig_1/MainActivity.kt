@@ -29,13 +29,13 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         isButtonClickable(false)
-        var words = getRandomWords(300)
+        var words = getRandomWords(50)
         var adapter = WordsAdapter(this, words)
         binding.wordList.adapter = adapter
-        var inputWord = ""
+        var plainText = ""
         binding.wordList.setOnItemClickListener{_, _, position, _ ->
             selectedItem = words[position]
-            inputWord = words[position].word
+            plainText = words[position].word
             if(selectedItem.isChosen){
                 resetHighlights(words)
                 isButtonClickable(false)
@@ -46,20 +46,24 @@ class MainActivity : AppCompatActivity() {
         }
 
         binding.button.setOnClickListener{
-            if(inputWord != "") {
+            if(plainText != "") {
                 binding.button.isActivated = true
-                val mdString = hashString(inputWord)
+                val mdString = hashString(plainText)
                 val mdStringByteArray = mdString.toByteArray()
                 KeyStore.keyPair = generateKeyPair()
                 val signature = signData(mdStringByteArray, KeyStore.keyPair!!.private)
-                println(mdString)
-                println(KeyStore.keyPair!!.public.toString())
-                println(KeyStore.keyPair!!.private.toString())
-                val i = Intent(this@MainActivity, NFCActivity1::class.java)
-                i.putExtra("inputWord", inputWord)
-                i.putExtra("publicKey", KeyStore.keyPair!!.public)
-                i.putExtra("privateKey", KeyStore.keyPair!!.private)
-                i.putExtra("signature", signature)
+//                val publicKeyBytes = KeyStore.keyPair!!.public.encoded
+                //create a string with list
+                var stringList = plainText
+                words.shuffled().take(9).forEach() {element ->
+                    stringList += " ${element.word}"
+                }
+
+                val i = Intent(this@MainActivity, NFCActivity1::class.java).apply {
+                    putExtra("stringList", stringList)
+                    putExtra("signature", signature)
+                }
+
                 startActivity(i)
             }else{
                 Toast.makeText(this, "Please choose a word",Toast.LENGTH_LONG).show()
@@ -84,20 +88,18 @@ class MainActivity : AppCompatActivity() {
     }
     private fun getRandomWords(numWords: Int): List<WordItem> {
         val wordPool = listOf(
-            "apple", "banana", "cherry", "date", "elderberry", "fig", "grape", "honeydew",
-            "kiwi", "lemon", "mango", "nectarine", "orange", "papaya", "quince", "raspberry",
-            "strawberry", "tangerine", "ugli", "vanilla", "watermelon", "xigua", "yellowfruit", "zucchini",
-            "avocado", "blackberry", "blueberry", "cantaloupe", "cranberry", "dragonfruit", "gooseberry",
-            "guava", "jackfruit", "kumquat", "lime", "lychee", "mandarin", "mulberry", "olive", "peach",
-            "pear", "persimmon", "pineapple", "plum", "pomegranate", "pumpkin", "rambutan", "soursop",
-            "starfruit", "tamarind", "tomato", "yuzu", "apricot", "bilberry", "boysenberry", "clementine",
-            "damson", "feijoa", "jambul", "longan", "loquat", "medlar", "nashi", "passionfruit", "pawpaw",
-            "plantain", "prune", "satsuma", "sloe", "tangelo", "tayberry", "ugni", "whortleberry",
-            "chikoo", "durian", "elderflower", "grapefruit", "huckleberry", "jabuticaba", "kiwano", "lakoocha",
-            "mammee", "mangosteen", "marionberry", "muscadine", "naranjilla", "nance", "pitanga", "rambai",
-            "salak", "santol", "sapodilla", "serviceberry", "surinam cherry", "wax apple", "white currant"
+            "Prescribe", "Gullible", "Start", "Neat", "Kindhearted", "Mysterious", "Fortunate", "Dim", "Broad", "Recondite",
+            "Eel", "Thank", "Clinic", "Help", "Icy", "Rain", "Preference", "Fraud", "Ankh", "Meal", "Spy", "Solicit",
+            "Hilarious", "Elastic", "Haunting", "Hangar", "Homesick", "Glimmer", "Decide", "Gravitational", "Approve", "Contempt",
+            "Adornment", "Roof", "Gang", "Ingest", "Rastle", "Gaudy", "Crucifier", "Economics", "Nation", "Barnyard", "Prosecute",
+            "Bloodsport", "Acrobatic", "Know", "Safety", "Debauchery", "Understand", "Bump", "Cement", "Portrait", "Tremor", "Explain",
+            "Pavement", "Enemies", "Amazingly", "Killjoy", "Heritage", "Detachable", "Comment", "Secretive", "Blowgun", "Fatal",
+            "Earthborn", "Adaptable", "Shop", "Audience", "Dropping", "Pollution", "Authority", "Shaggy", "Honey", "West", "Emotion",
+            "Bauble", "Debug", "Fugitive", "Sneaky", "Hive", "Illegal", "Candy", "Robber", "Steak", "Division", "Crayon", "Innocent",
+            "Bags", "Hoopla", "Scatter", "Hyaena", "Obsession", "Knowledge", "Vest", "Overjoyed", "Comrade", "Amoeba", "Intruder",
+            "Friendless", "Apply", "Horrors", "Offer", "Resource", "Coma", "Exchange", "Everyone", "Cows", "Sanctify", "Ballet"
         )
-        var list = listOf<WordItem>()
+        val list = mutableListOf<WordItem>()
         wordPool.shuffled().take(numWords).forEachIndexed() {index, element ->
             list += WordItem(index,element)
         }

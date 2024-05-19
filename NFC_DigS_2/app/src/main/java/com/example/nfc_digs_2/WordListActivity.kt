@@ -1,58 +1,99 @@
 package com.example.nfc_digs_2
 
-import WordsAdapter
-import androidx.appcompat.app.AppCompatActivity
+import android.nfc.NfcAdapter
+import android.nfc.Tag
+import android.nfc.tech.IsoDep
 import android.os.Bundle
+import android.widget.ArrayAdapter
+import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.ui.graphics.Color
 import androidx.core.view.children
 import com.example.nfc_digs_2.databinding.ActivityWordListBinding
-import java.security.PrivateKey
+import java.security.KeyFactory
 import java.security.PublicKey
 import java.security.Signature
+import java.security.spec.X509EncodedKeySpec
 
-class WordListActivity : AppCompatActivity() {
+class WordListActivity : AppCompatActivity() , NfcAdapter.ReaderCallback{
+
     private lateinit var binding: ActivityWordListBinding
+    private lateinit var nfcAdapter: NfcAdapter
+    private lateinit var adapter : ArrayAdapter<String>
+    private lateinit var receivedWord :String
+    private lateinit var randomWords :List<String>
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityWordListBinding.inflate(layoutInflater)
         setContentView(binding.root)
-//      var receivedWord = intent.getStringExtra("receivedWord")
-        var receivedWord = "test"
-        var receivedPublicKey = ""
-        var randomWords = (getRandomWords(9) + receivedWord).shuffled()
-        val adapter = WordsAdapter(this, randomWords)
+        nfcAdapter = NfcAdapter.getDefaultAdapter(this)
+        if (nfcAdapter == null) {
+            Toast.makeText(this, "NFC is not available on this device", Toast.LENGTH_SHORT).show()
+            finish()
+            return
+        }
+        if (!nfcAdapter!!.isEnabled) {
+            Toast.makeText(this, "Please enable NFC", Toast.LENGTH_SHORT).show()
+        }
+        binding.button.setOnClickListener{
+            enableNFC()
+        }
+        val receivedWord = intent.getStringExtra("stringList")
+        val signatureBytes = intent.getByteArrayExtra("signature")
+        println("Received signature $signatureBytes")
+        randomWords = receivedWord?.split(" ")?.shuffled()!!
+//        var randomWords = (getRandomWords(9) + receivedWord).shuffled()
+        adapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, randomWords)
         binding.wordList.adapter = adapter
-        highlightCorrectWord(receivedWord, randomWords)
+        binding.button.setOnClickListener {
+            enableNFC()
 
+        }
     }
-    private fun getRandomWords(numWords: Int): List<String> {
-        val wordPool = listOf(
-            "apple", "banana", "cherry", "date", "elderberry", "fig", "grape", "honeydew",
-            "kiwi", "lemon", "mango", "nectarine", "orange", "papaya", "quince", "raspberry",
-            "strawberry", "tangerine", "ugli", "vanilla", "watermelon", "xigua", "yellowfruit", "zucchini",
-            "avocado", "blackberry", "blueberry", "cantaloupe", "cranberry", "dragonfruit", "gooseberry",
-            "guava", "jackfruit", "kumquat", "lime", "lychee", "mandarin", "mulberry", "olive", "peach",
-            "pear", "persimmon", "pineapple", "plum", "pomegranate", "pumpkin", "rambutan", "soursop",
-            "starfruit", "tamarind", "tomato", "yuzu", "apricot", "bilberry", "boysenberry", "clementine",
-            "damson", "feijoa", "jambul", "longan", "loquat", "medlar", "nashi", "passionfruit", "pawpaw",
-            "plantain", "prune", "satsuma", "sloe", "tangelo", "tayberry", "ugni", "whortleberry",
-            "chikoo", "durian", "elderflower", "grapefruit", "huckleberry", "jabuticaba", "kiwano", "lakoocha",
-            "mammee", "mangosteen", "marionberry", "muscadine", "naranjilla", "nance", "pitanga", "rambai",
-            "salak", "santol", "sapodilla", "serviceberry", "surinam cherry", "wax apple", "white currant"
-        )
-
-        return wordPool.shuffled().take(numWords)
-    }
-    fun verifySignature(data: ByteArray, signatureBytes: ByteArray, publicKey: PublicKey): Boolean {
+    private fun verifySignature(data: ByteArray, signatureBytes: ByteArray, publicKey: PublicKey): Boolean {
         val signature = Signature.getInstance("SHA256withRSA")
         signature.initVerify(publicKey)
         signature.update(data)
         return signature.verify(signatureBytes)
     }
-    fun highlightCorrectWord(receivedWord:String, randomWords: List<String>){
+    private fun highlightCorrectWord(receivedWord:String, randomWords: List<String>){
         var index = randomWords.indexOf(receivedWord)
         println(binding.wordList.children.toList().toString())
         binding.wordList.getChildAt(index).setBackgroundColor(Color.Green.hashCode())
+    }
+    private fun enableNFC() {
+        if (nfcAdapter != null) {
+            // Enable foreground dispatch to receive NFC events
+            nfcAdapter?.enableReaderMode(this, this,
+                NfcAdapter.FLAG_READER_NFC_A or NfcAdapter.FLAG_READER_SKIP_NDEF_CHECK,
+                null)
+        }
+    }
+    public override fun onResume() {
+        super.onResume()
+    }
+    public override fun onPause() {
+        super.onPause()
+        nfcAdapter?.disableReaderMode(this)
+    }
+    override fun onTagDiscovered(tag: Tag?) {
+        try{
+            val isoDep = IsoDep.get(tag)
+            isoDep.connect()
+            isoDep.timeout = 2000
+            val response = isoDep.transceive("00A4040007A0000002471001".toByteArray())
+            var responseStr = response.toString(Charsets.UTF_8)
+            println(responseStr)
+            runOnUiThread{
+                binding.wordList.post {//HIGHLIGHT AFTER VERIFYING
+                    highlightCorrectWord(receivedWord, randomWords)
+                }
+            }
+            isoDep.close()
+        }catch(e:Exception){
+            println("wlistact error: ${ e.message }")
+        }
     }
 //    fun bytesToPublicKey(bytes: ByteArray): PublicKey {
 //        val keySpec = X509EncodedKeySpec(bytes)
