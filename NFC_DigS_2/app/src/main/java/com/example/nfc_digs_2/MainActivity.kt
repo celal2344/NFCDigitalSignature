@@ -23,6 +23,7 @@ class MainActivity : AppCompatActivity() , NfcAdapter.ReaderCallback{
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        //check nfc
         nfcAdapter = NfcAdapter.getDefaultAdapter(this)
         if (nfcAdapter == null) {
             Toast.makeText(this, "NFC is not available on this device", Toast.LENGTH_SHORT).show()
@@ -69,9 +70,10 @@ class MainActivity : AppCompatActivity() , NfcAdapter.ReaderCallback{
         try{
             val isoDep = IsoDep.get(tag)
             isoDep.connect()
-            isoDep.timeout = 2000
-            val responseApdu = isoDep.transceive(hexStringToByteArray("00A4040007A0000002471001"))
+            isoDep.timeout = 3000
+            val responseApdu = isoDep.transceive(hexStringToByteArray("00A4040007A0000002471011"))
             isoDep.close()
+            //split the received response then send
             val buffer = responseApdu.copyOfRange(0, 4)
             val stringLength = ByteBuffer.wrap(buffer).getInt()  // Read the first 4 bytes as the string length
             val stringBytes = responseApdu.sliceArray(4 until (4 + stringLength))

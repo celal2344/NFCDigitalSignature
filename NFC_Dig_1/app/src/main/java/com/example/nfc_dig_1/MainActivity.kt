@@ -13,25 +13,33 @@ import androidx.compose.ui.graphics.Color
 import androidx.core.content.ContextCompat
 import androidx.core.view.forEach
 import com.example.nfc_dig_1.databinding.ActivityMainBinding
+import java.security.KeyFactory
 import java.security.MessageDigest
 import java.security.KeyPairGenerator
 import java.security.KeyPair
 import java.security.PrivateKey
+import java.security.PublicKey
 import java.security.Signature
+import java.security.spec.X509EncodedKeySpec
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
     private var selectedItem: WordItem = WordItem(-1,"")
 
+    @OptIn(ExperimentalStdlibApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         isButtonClickable(false)
+
+        //get 50 random words and display on the list
         var words = getRandomWords(50)
         var adapter = WordsAdapter(this, words)
         binding.wordList.adapter = adapter
+
+        //when an item on the list is choosen set it as the selected item, highlight it and enable the button
         var plainText = ""
         binding.wordList.setOnItemClickListener{_, _, position, _ ->
             selectedItem = words[position]
@@ -48,22 +56,28 @@ class MainActivity : AppCompatActivity() {
         binding.button.setOnClickListener{
             if(plainText != "") {
                 binding.button.isActivated = true
+                //hash the choosen word to md before signing
                 val mdString = hashString(plainText)
                 val mdStringByteArray = mdString.toByteArray()
-                KeyStore.keyPair = generateKeyPair()
-                val signature = signData(mdStringByteArray, KeyStore.keyPair!!.private)
-//                val publicKeyBytes = KeyStore.keyPair!!.public.encoded
-                //create a string with list
+                val keyPair = generateKeyPair()
+
+                //get public key turn it to byte array and send
+                val publicKeyBytes = keyPair.public.encoded
+
+                //create signature
+                val signature = signData(mdStringByteArray, keyPair.private)
+
+                //add 9 random words from the list next to the choosen word
                 var stringList = plainText
                 words.shuffled().take(9).forEach() {element ->
                     stringList += " ${element.word}"
                 }
-
-                val i = Intent(this@MainActivity, NFCActivity1::class.java).apply {
+                //send sginature and the words string
+                val i = Intent(this@MainActivity, NFCActivity1::class.java).apply {//send plaintext and signature to nfcact1
                     putExtra("stringList", stringList)
                     putExtra("signature", signature)
+                    putExtra("publicKeyBytes", publicKeyBytes)
                 }
-
                 startActivity(i)
             }else{
                 Toast.makeText(this, "Please choose a word",Toast.LENGTH_LONG).show()
@@ -128,13 +142,10 @@ class MainActivity : AppCompatActivity() {
         keyGen.initialize(2048) // You can choose a key size
         return keyGen.genKeyPair()
     }
-    fun signData(data: ByteArray, privateKey: PrivateKey): ByteArray {
+    private fun signData(data: ByteArray, privateKey: PrivateKey): ByteArray {
         val signature = Signature.getInstance("SHA256withRSA")
         signature.initSign(privateKey)
         signature.update(data)
         return signature.sign()
-    }
-    object KeyStore {
-        var keyPair: KeyPair? = null
     }
 }
